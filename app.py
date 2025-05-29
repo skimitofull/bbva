@@ -66,7 +66,7 @@ def generar_pdf(df):
         if y < (len(bloque) + 1) * altura_linea:
             nueva_pagina()
         for i, row in enumerate(bloque):
-            fuente_actual = fuente_italic if i == 1 else fuente_regular
+            fuente_actual = fuente_italic if i > 0 else fuente_regular
             c.setFont(fuente_actual, 9.5)
             for k, pos in enumerate(posiciones):
                 texto = str(row[k]) if k < len(row) and pd.notna(row[k]) else ""
@@ -77,7 +77,7 @@ def generar_pdf(df):
     buffer.seek(0)
     return buffer
 
-# Interfaz de usuario en Streamlit
+# Streamlit app
 st.title("Generador de Estado de Cuenta Ficticio")
 st.write("Sube un archivo Excel con la estructura original del estado de cuenta")
 

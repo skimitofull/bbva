@@ -9,16 +9,15 @@ import base64
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# Registrar fuente Arial-Narrow desde archivo TTF local
+# Registrar fuentes desde archivo TTF local
 try:
     pdfmetrics.registerFont(TTFont('Arial-Narrow', 'fonts/arialn.ttf'))
     pdfmetrics.registerFont(TTFont('Arial-Narrow-Italic', 'fonts/arialni.ttf'))
 except Exception as e:
-    # Manejo de error al cargar fuentes
     st.error(f"Error al cargar las fuentes Arial Narrow: {e}")
     st.stop()
 
-# Función para generar el PDF con formato replicado al original
+# Función para generar el PDF
 def generar_pdf(df):
     filas = []
     bloque = []
@@ -38,7 +37,7 @@ def generar_pdf(df):
 
     margen_izq = 10 * mm
     margen_sup = height - 33 * mm
-    altura_linea = 3.8 * mm  # Espaciado ajustado
+    altura_linea = 3.8 * mm
     fuente_regular = "Arial-Narrow"
     fuente_italic = "Arial-Narrow-Italic"
 
@@ -79,32 +78,12 @@ def generar_pdf(df):
 
 # Streamlit app
 st.title("Generador de Estado de Cuenta Ficticio")
-st.write("Sube un archivo Excel con la estructura original del estado de cuenta")
+st.write("Sube un archivo Excel con múltiples líneas por movimiento")
 
 archivo = st.file_uploader("Cargar archivo Excel", type=[".xlsx"])
 
 if archivo:
-    df_raw = pd.read_excel(archivo, engine="openpyxl")
-
-    def transformar_formato_original(df):
-        filas = []
-        encabezados = df.iloc[0].tolist()
-        temp = [None] * len(encabezados)
-        for i in range(1, len(df)):
-            fila = df.iloc[i]
-            if pd.notna(fila[1]):
-                if any(pd.notna(v) for v in temp):
-                    filas.append(temp)
-                temp = fila.tolist()
-            else:
-                for j in range(len(temp)):
-                    if pd.isna(temp[j]) and pd.notna(fila[j]):
-                        temp[j] = fila[j]
-        if any(pd.notna(v) for v in temp):
-            filas.append(temp)
-        return pd.DataFrame(filas, columns=encabezados)
-
-    df = transformar_formato_original(df_raw)
+    df = pd.read_excel(archivo, engine="openpyxl")
     pdf_buffer = generar_pdf(df)
 
     st.download_button(label="Descargar Estado de Cuenta PDF",

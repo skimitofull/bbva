@@ -9,12 +9,11 @@ import base64
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# Registrar fuentes Arial Narrow
+# Registrar fuente Arial-Narrow desde archivo TTF local
 try:
     pdfmetrics.registerFont(TTFont('Arial-Narrow', 'fonts/arialn.ttf'))
     pdfmetrics.registerFont(TTFont('Arial-Narrow-Italic', 'fonts/arialni.ttf'))
 except Exception as e:
-    # Manejo de error al cargar fuentes
     st.error(f"Error al cargar las fuentes Arial Narrow: {e}")
     st.stop()
 
@@ -43,7 +42,7 @@ def generar_pdf(df):
     fuente_italic = "Arial-Narrow-Italic"
 
     columnas = ["OPER", "LIQ", "DESCRIPCIÓN", "REFERENCIA", "CARGOS", "ABONOS", "OPERACIÓN", "LIQUIDACIÓN"]
-    posiciones = [14 * mm, 25 * mm, 40 * mm, 78 * mm, 112 * mm, 132 * mm, 152 * mm, 172 * mm]
+    posiciones = [0 * mm, 5.658 * mm, 17.967 * mm, 29.069 * mm, 137.904 * mm, 151.354 * mm, 175.228 * mm, 199.118 * mm]
 
     def encabezado(y_pos):
         c.setFillColor(black)
@@ -77,7 +76,7 @@ def generar_pdf(df):
     buffer.seek(0)
     return buffer
 
-# Interfaz de usuario
+# Interfaz Streamlit
 st.title("Generador de Estado de Cuenta Ficticio")
 st.write("Sube un archivo Excel con múltiples líneas por movimiento")
 

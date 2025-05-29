@@ -9,10 +9,15 @@ import base64
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# Registrar fuente Arial-Narrow desde archivo TTF local
-pdfmetrics.registerFont(TTFont('Arial-Narrow', 'fonts/arialn.ttf'))
-pdfmetrics.registerFont(TTFont('Arial-Narrow-Italic', 'fonts/arialni.ttf'))
+# Registrar fuentes desde archivo TTF local
+try:
+    pdfmetrics.registerFont(TTFont('Arial-Narrow', 'fonts/arialn.ttf'))
+    pdfmetrics.registerFont(TTFont('Arial-Narrow-Italic', 'fonts/arialni.ttf'))
+except Exception as e:
+    st.error(f"Error al cargar las fuentes Arial Narrow: {e}")
+    st.stop()
 
+# Función para generar el PDF con formato replicado al original
 def generar_pdf(df):
     def es_nueva_linea_movimiento(row):
         return pd.notna(row[1]) or pd.notna(row[2])  # FECHA OPER o LIQ
@@ -72,7 +77,7 @@ def generar_pdf(df):
     buffer.seek(0)
     return buffer
 
-# Streamlit app
+# Interfaz de usuario en Streamlit
 st.title("Generador de Estado de Cuenta Ficticio")
 st.write("Sube un archivo Excel con la estructura original del estado de cuenta")
 

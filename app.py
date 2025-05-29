@@ -16,9 +16,9 @@ def generar_pdf(df):
 
     margen_izq = 10 * mm
     margen_sup = height - 33 * mm
-    altura_linea = 4.3 * mm
-    fuente = "Helvetica"
-    tamanio_fuente = 6
+    altura_linea = 3.8 * mm
+    fuente = "Arial-Narrow"
+    tamanio_fuente = 9.5
 
     columnas = ["OPER", "LIQ", "DESCRIPCIÓN", "REFERENCIA", "CARGOS", "ABONOS", "OPERACIÓN", "LIQUIDACIÓN"]
     posiciones = [14 * mm, 30 * mm, 45 * mm, 87 * mm, 124 * mm, 144 * mm, 164 * mm, 184 * mm]
@@ -62,7 +62,29 @@ st.write("Sube un archivo Excel con la estructura del estado de cuenta")
 archivo = st.file_uploader("Cargar archivo Excel", type=[".xlsx"])
 
 if archivo:
-    df = pd.read_excel(archivo, engine="openpyxl")
+    df_raw = pd.read_excel(archivo, engine="openpyxl")
+
+    def transformar_formato_original(df):
+        filas = []
+        encabezados = df.iloc[0].tolist()
+        temp = [None] * len(encabezados)
+
+        for i in range(1, len(df)):
+            fila = df.iloc[i]
+            if pd.notna(fila[1]):
+                if any(pd.notna(v) for v in temp):
+                    filas.append(temp)
+                temp = fila.tolist()
+            else:
+                for j in range(len(temp)):
+                    if pd.isna(temp[j]) and pd.notna(fila[j]):
+                        temp[j] = fila[j]
+        if any(pd.notna(v) for v in temp):
+            filas.append(temp)
+
+        return pd.DataFrame(filas, columns=encabezados)
+
+    df = transformar_formato_original(df_raw)
     pdf_buffer = generar_pdf(df)
 
     st.download_button(label="Descargar Estado de Cuenta PDF",

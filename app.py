@@ -9,15 +9,16 @@ import base64
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# Registrar fuentes desde archivo TTF local
+# Registrar fuentes Arial Narrow
 try:
     pdfmetrics.registerFont(TTFont('Arial-Narrow', 'fonts/arialn.ttf'))
     pdfmetrics.registerFont(TTFont('Arial-Narrow-Italic', 'fonts/arialni.ttf'))
 except Exception as e:
+    # Manejo de error al cargar fuentes
     st.error(f"Error al cargar las fuentes Arial Narrow: {e}")
     st.stop()
 
-# Función para generar el PDF
+# Función para generar el PDF con formato replicado al original
 def generar_pdf(df):
     filas = []
     bloque = []
@@ -42,7 +43,7 @@ def generar_pdf(df):
     fuente_italic = "Arial-Narrow-Italic"
 
     columnas = ["OPER", "LIQ", "DESCRIPCIÓN", "REFERENCIA", "CARGOS", "ABONOS", "OPERACIÓN", "LIQUIDACIÓN"]
-    posiciones = [14 * mm, 30 * mm, 45 * mm, 87 * mm, 124 * mm, 144 * mm, 164 * mm, 184 * mm]
+    posiciones = [14 * mm, 25 * mm, 40 * mm, 78 * mm, 112 * mm, 132 * mm, 152 * mm, 172 * mm]
 
     def encabezado(y_pos):
         c.setFillColor(black)
@@ -65,7 +66,7 @@ def generar_pdf(df):
         if y < (len(bloque) + 1) * altura_linea:
             nueva_pagina()
         for i, row in enumerate(bloque):
-            fuente_actual = fuente_italic if i > 0 else fuente_regular
+            fuente_actual = fuente_italic if i == 1 else fuente_regular
             c.setFont(fuente_actual, 9.5)
             for k, pos in enumerate(posiciones):
                 texto = str(row[k]) if k < len(row) and pd.notna(row[k]) else ""
@@ -76,7 +77,7 @@ def generar_pdf(df):
     buffer.seek(0)
     return buffer
 
-# Streamlit app
+# Interfaz de usuario
 st.title("Generador de Estado de Cuenta Ficticio")
 st.write("Sube un archivo Excel con múltiples líneas por movimiento")
 

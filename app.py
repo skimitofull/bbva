@@ -4,10 +4,9 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
 from io import BytesIO
-from PIL import Image
+import base64
 
-# Función para generar el PDF en memoria y también mostrarlo como imagen
-
+# Función para generar el PDF en memoria
 def generar_pdf(df):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
@@ -79,11 +78,15 @@ if archivo:
                        file_name="estado_de_cuenta.pdf",
                        mime="application/pdf")
 
-    st.write("Vista previa del PDF:")
-    try:
-        from pdf2image import convert_from_bytes
-        images = convert_from_bytes(pdf_buffer.getvalue(), dpi=150)
-        for img in images:
-            st.image(img, use_column_width=True)
-    except ImportError:
-        st.warning("Instala pdf2image para ver la vista previa del PDF en la app. Agrega 'pdf2image' y 'poppler-utils' a los requerimientos.")
+    # Mostrar visor embebido con base64
+    base64_pdf = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
+    pdf_display = f"""
+        <iframe
+            src="data:application/pdf;base64,{base64_pdf}"
+            width="100%"
+            height="700px"
+            type="application/pdf">
+        </iframe>
+    """
+    st.markdown("### Vista previa del PDF generado")
+    st.components.v1.html(pdf_display, height=700, scrolling=True)

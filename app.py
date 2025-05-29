@@ -9,7 +9,7 @@ import base64
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# Registrar fuente Arial-Narrow desde archivo TTF local
+# Registrar fuentes Arial-Narrow y Arial-Narrow-Italic desde archivos TTF locales
 try:
     pdfmetrics.registerFont(TTFont('Arial-Narrow', 'fonts/arialn.ttf'))
     pdfmetrics.registerFont(TTFont('Arial-Narrow-Italic', 'fonts/arialni.ttf'))
@@ -35,14 +35,13 @@ def generar_pdf(df):
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
 
-    margen_izq = 10 * mm
     margen_sup = height - 33 * mm
     altura_linea = 3.8 * mm
     fuente_regular = "Arial-Narrow"
     fuente_italic = "Arial-Narrow-Italic"
 
     columnas = ["OPER", "LIQ", "DESCRIPCIÓN", "REFERENCIA", "CARGOS", "ABONOS", "OPERACIÓN", "LIQUIDACIÓN"]
-    posiciones = [0 * mm, 5.658 * mm, 17.967 * mm, 29.069 * mm, 137.904 * mm, 151.354 * mm, 175.228 * mm, 199.118 * mm]
+    posiciones = [5.658 * mm, 17.967 * mm, 29.069 * mm, 0 * mm, 137.904 * mm, 151.354 * mm, 175.228 * mm, 199.118 * mm]
 
     def encabezado(y_pos):
         c.setFillColor(black)
@@ -76,7 +75,7 @@ def generar_pdf(df):
     buffer.seek(0)
     return buffer
 
-# Interfaz Streamlit
+# Interfaz en Streamlit
 st.title("Generador de Estado de Cuenta Ficticio")
 st.write("Sube un archivo Excel con múltiples líneas por movimiento")
 

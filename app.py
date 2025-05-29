@@ -7,20 +7,20 @@ from io import BytesIO
 import base64
 
 # Función para generar el PDF en memoria
+
 def generar_pdf(df):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
 
-    margen_izq = 20 * mm
-    margen_sup = height - 25 * mm
-    altura_linea = 6 * mm
+    margen_izq = 13 * mm
+    margen_sup = height - 37 * mm
+    altura_linea = 5.2 * mm
     fuente = "Helvetica"
     tamanio_fuente = 7
 
     columnas = ["OPER", "LIQ", "DESCRIPCIÓN", "REFERENCIA", "CARGOS", "ABONOS", "OPERACIÓN", "LIQUIDACIÓN"]
-    posiciones = [margen_izq, margen_izq + 20*mm, margen_izq + 40*mm, margen_izq + 95*mm,
-                  margen_izq + 120*mm, margen_izq + 140*mm, margen_izq + 160*mm, margen_izq + 180*mm]
+    posiciones = [13 * mm, 31 * mm, 46 * mm, 80 * mm, 128 * mm, 147 * mm, 166 * mm, 185 * mm]
 
     y = margen_sup
 
@@ -29,13 +29,13 @@ def generar_pdf(df):
         c.showPage()
         y = margen_sup
         c.setFont(fuente, tamanio_fuente)
-        c.drawString(margen_izq, height - 20 * mm, "Estado de Cuenta")
+        c.drawString(13 * mm, height - 20 * mm, "Estado de Cuenta")
         for i, col in enumerate(columnas):
             c.drawString(posiciones[i], y, col)
         y -= altura_linea
 
     c.setFont(fuente, 10)
-    c.drawString(margen_izq, height - 20 * mm, "Estado de Cuenta")
+    c.drawString(13 * mm, height - 20 * mm, "Estado de Cuenta")
     c.setFont(fuente, tamanio_fuente)
 
     for i, col in enumerate(columnas):
@@ -47,7 +47,7 @@ def generar_pdf(df):
             nueva_pagina()
 
         c.setFillGray(0.9)
-        c.rect(margen_izq - 2, y, width - 2 * margen_izq + 4, 2 * altura_linea, fill=True, stroke=False)
+        c.rect(13 * mm - 2, y - 1.5, width - 2 * 13 * mm + 4, 2 * altura_linea, fill=True, stroke=False)
         c.setFillGray(0)
 
         for j in range(2):

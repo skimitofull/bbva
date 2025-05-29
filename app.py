@@ -9,23 +9,23 @@ import base64
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# Registrar fuentes desde archivo TTF local
+# Registrar fuente Arial-Narrow desde archivo TTF local
 try:
     pdfmetrics.registerFont(TTFont('Arial-Narrow', 'fonts/arialn.ttf'))
     pdfmetrics.registerFont(TTFont('Arial-Narrow-Italic', 'fonts/arialni.ttf'))
 except Exception as e:
+    # Manejo de error al cargar fuentes
     st.error(f"Error al cargar las fuentes Arial Narrow: {e}")
     st.stop()
 
 # Función para generar el PDF con formato replicado al original
 def generar_pdf(df):
-    def es_nueva_linea_movimiento(row):
-        return pd.notna(row[1]) or pd.notna(row[2])  # FECHA OPER o LIQ
-
     filas = []
     bloque = []
+    fecha_detectada = lambda r: pd.notna(r[1]) and isinstance(r[1], str) and "/" in r[1]
+
     for _, row in df.iterrows():
-        if es_nueva_linea_movimiento(row) and bloque:
+        if fecha_detectada(row) and bloque:
             filas.append(bloque)
             bloque = []
         bloque.append(row)
@@ -38,7 +38,7 @@ def generar_pdf(df):
 
     margen_izq = 10 * mm
     margen_sup = height - 33 * mm
-    altura_linea = 3.8 * mm
+    altura_linea = 3.8 * mm  # Espaciado ajustado
     fuente_regular = "Arial-Narrow"
     fuente_italic = "Arial-Narrow-Italic"
 

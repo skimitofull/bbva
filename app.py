@@ -6,10 +6,27 @@ from reportlab.lib.units import mm
 from reportlab.lib.colors import black
 from io import BytesIO
 import base64
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
-# Función para generar el PDF con formato replicado al original
+# Registrar fuente Arial-Narrow desde archivo TTF local
+pdfmetrics.registerFont(TTFont('Arial-Narrow', 'fonts/arialn.ttf'))
+pdfmetrics.registerFont(TTFont('Arial-Narrow-Italic', 'fonts/arialni.ttf'))
 
 def generar_pdf(df):
+    def es_nueva_linea_movimiento(row):
+        return pd.notna(row[1]) or pd.notna(row[2])  # FECHA OPER o LIQ
+
+    filas = []
+    bloque = []
+    for _, row in df.iterrows():
+        if es_nueva_linea_movimiento(row) and bloque:
+            filas.append(bloque)
+            bloque = []
+        bloque.append(row)
+    if bloque:
+        filas.append(bloque)
+
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
@@ -17,15 +34,15 @@ def generar_pdf(df):
     margen_izq = 10 * mm
     margen_sup = height - 33 * mm
     altura_linea = 3.8 * mm
-    fuente = "Arial-Narrow"
-    tamanio_fuente = 9.5
+    fuente_regular = "Arial-Narrow"
+    fuente_italic = "Arial-Narrow-Italic"
 
     columnas = ["OPER", "LIQ", "DESCRIPCIÓN", "REFERENCIA", "CARGOS", "ABONOS", "OPERACIÓN", "LIQUIDACIÓN"]
     posiciones = [14 * mm, 30 * mm, 45 * mm, 87 * mm, 124 * mm, 144 * mm, 164 * mm, 184 * mm]
 
     def encabezado(y_pos):
         c.setFillColor(black)
-        c.setFont(fuente, tamanio_fuente)
+        c.setFont(fuente_regular, 9.5)
         for i, col in enumerate(columnas):
             c.drawString(posiciones[i], y_pos, col)
 
@@ -40,16 +57,16 @@ def generar_pdf(df):
     encabezado(y)
     y -= altura_linea
 
-    for index, row in df.iterrows():
-        if y < 40 * mm:
+    for bloque in filas:
+        if y < (len(bloque) + 1) * altura_linea:
             nueva_pagina()
-
-        for k, pos in enumerate(posiciones):
-            texto = str(row[k]) if k < len(row) and pd.notna(row[k]) else ""
-            c.setFont(fuente, tamanio_fuente)
-            c.drawString(pos, y, texto)
-
-        y -= altura_linea
+        for i, row in enumerate(bloque):
+            fuente_actual = fuente_italic if i == 1 else fuente_regular
+            c.setFont(fuente_actual, 9.5)
+            for k, pos in enumerate(posiciones):
+                texto = str(row[k]) if k < len(row) and pd.notna(row[k]) else ""
+                c.drawString(pos, y, texto)
+            y -= altura_linea
 
     c.save()
     buffer.seek(0)
@@ -57,7 +74,7 @@ def generar_pdf(df):
 
 # Streamlit app
 st.title("Generador de Estado de Cuenta Ficticio")
-st.write("Sube un archivo Excel con la estructura del estado de cuenta")
+st.write("Sube un archivo Excel con la estructura original del estado de cuenta")
 
 archivo = st.file_uploader("Cargar archivo Excel", type=[".xlsx"])
 
@@ -68,7 +85,6 @@ if archivo:
         filas = []
         encabezados = df.iloc[0].tolist()
         temp = [None] * len(encabezados)
-
         for i in range(1, len(df)):
             fila = df.iloc[i]
             if pd.notna(fila[1]):
@@ -81,7 +97,6 @@ if archivo:
                         temp[j] = fila[j]
         if any(pd.notna(v) for v in temp):
             filas.append(temp)
-
         return pd.DataFrame(filas, columns=encabezados)
 
     df = transformar_formato_original(df_raw)
@@ -92,15 +107,14 @@ if archivo:
                        file_name="estado_de_cuenta.pdf",
                        mime="application/pdf")
 
-    # Mostrar visor embebido con base64
-    base64_pdf = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
-    pdf_display = f"""
+    base64_pdf = base64.b64encode(pdf_buffer.getvalue()).decode("utf-8")
+    pdf_display = f'''
         <iframe
             src="data:application/pdf;base64,{base64_pdf}"
             width="100%"
             height="700px"
             type="application/pdf">
         </iframe>
-    """
+    '''
     st.markdown("### Vista previa del PDF generado")
     st.components.v1.html(pdf_display, height=700, scrolling=True)

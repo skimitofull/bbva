@@ -8,19 +8,20 @@ from io import BytesIO
 import base64
 
 # Función para generar el PDF con formato replicado al original
+
 def generar_pdf(df):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
 
     margen_izq = 10 * mm
-    margen_sup = height - 40 * mm
-    altura_linea = 5.2 * mm
+    margen_sup = height - 33 * mm
+    altura_linea = 4.3 * mm
     fuente = "Helvetica"
-    tamanio_fuente = 7
+    tamanio_fuente = 6
 
     columnas = ["OPER", "LIQ", "DESCRIPCIÓN", "REFERENCIA", "CARGOS", "ABONOS", "OPERACIÓN", "LIQUIDACIÓN"]
-    posiciones = [margen_izq + 2, 30 * mm, 50 * mm, 88 * mm, 130 * mm, 150 * mm, 170 * mm, 190 * mm]
+    posiciones = [14 * mm, 30 * mm, 45 * mm, 87 * mm, 124 * mm, 144 * mm, 164 * mm, 184 * mm]
 
     def encabezado(y_pos):
         c.setFillColor(black)

@@ -32,95 +32,73 @@ if fase == "1. Generar Excel trabajado":
     saldo_final = st.number_input("Saldo final esperado", min_value=0.0, format="%.2f")
 
     if archivo_excel and st.button("Generar Excel trabajado"):
-        st.success("Parámetros recibidos. Iniciaremos el procesamiento del archivo.")
-        # Aquí se insertará el código para generar el Excel trabajado según los parámetros
-        # Este código se implementará en los siguientes pasos del desarrollo
+        df = pd.read_excel(archivo_excel, header=None)
+        df.columns = [str(i) for i in range(df.shape[1])]
 
-elif fase == "2. Convertir Excel a PDF final":
-    archivo_final = st.file_uploader("Sube el archivo Excel trabajado para convertir a PDF", type=["xlsx"])
+        def parse_fecha_es(fecha_txt):
+            meses = {"ENE": "JAN", "FEB": "FEB", "MAR": "MAR", "ABR": "APR", "MAY": "MAY", "JUN": "JUN",
+                     "JUL": "JUL", "AGO": "AUG", "SEP": "SEP", "OCT": "OCT", "NOV": "NOV", "DIC": "DEC"}
+            if isinstance(fecha_txt, str):
+                for esp, eng in meses.items():
+                    if esp in fecha_txt.upper():
+                        fecha_txt = fecha_txt.upper().replace(esp, eng)
+                        break
+                try:
+                    return pd.to_datetime(fecha_txt + "/2025", format="%d/%b/%Y")
+                except:
+                    return pd.NaT
+            return pd.NaT
 
-    if archivo_final and st.button("Generar PDF final"):
-        df = pd.read_excel(archivo_final, header=None)
-        pdf_buffer = generar_pdf(df)
-        st.success("PDF generado correctamente.")
-        st.download_button("Descargar PDF", data=pdf_buffer, file_name="estado_cuenta_final.pdf", mime="application/pdf")
+        df["fecha_dt"] = df["1"].apply(parse_fecha_es)
+        df["cargos"] = pd.to_numeric(df["4"], errors="coerce").fillna(0)
+        df["abonos"] = pd.to_numeric(df["5"], errors="coerce").fillna(0)
 
-# Función para generar el PDF con formato replicado al original
-def generar_pdf(df):
-    def es_nueva_linea_movimiento(row):
-        return pd.notna(row[1]) or pd.notna(row[2])  # FECHA OPER o LIQ
+        abonos_actuales = df["abonos"].sum()
+        cargos_actuales = df["cargos"].sum()
 
-    filas = []
-    bloque = []
-    fecha_detectada = lambda r: pd.notna(r[1]) and isinstance(r[1], str) and "/" in r[1]
+        abonos_faltantes = round(total_abonos - abonos_actuales, 2)
+        cargos_faltantes = round((saldo_inicial + total_abonos - saldo_final) - cargos_actuales, 2)
 
-    for _, row in df.iterrows():
-        if fecha_detectada(row) and bloque:
-            filas.append(bloque)
-            bloque = []
-        bloque.append(row)
-    if bloque:
-        filas.append(bloque)
+        fecha_base = datetime(2025, 4, 1)
 
-    saldo = 262776.23  # Saldo inicial fijo
-    movimientos_por_fecha = {}
+        def fecha_random():
+            return (fecha_base + timedelta(days=random.randint(0, 29))).strftime("%d/%b").upper().replace("APR", "ABR")
 
-    for bloque in filas:
-        fecha = bloque[0][1]  # FECHA OPER
-        movimientos_por_fecha.setdefault(fecha, []).append(bloque)
+        def generar_bloque(fecha, monto, tipo):
+            nombre = random.choice(["JUAN PÉREZ", "MARÍA LÓPEZ", "CARLOS RAMÍREZ", "ANA HERNÁNDEZ"])
+            descripcion = f"SPEI {'RECIBIDO' if tipo == 'abono' else 'ENVIADO'} BBVA"
+            cuenta = f"012{random.randint(1000,9999)}{random.randint(10000000,99999999)}"
+            referencia = f"{random.randint(100000000000000000,999999999999999999)}"
+            concepto = "TRANSFERENCIA ELECTRÓNICA"
+            fila1 = [None]*9; fila1[1] = fecha; fila1[2] = descripcion; fila1[5 if tipo=='abono' else 4] = monto
+            fila2 = [None]*9; fila2[2] = f"{random.randint(1000000000,9999999999)} 012 0001 {concepto}"
+            fila3 = [None]*9; fila3[2] = cuenta
+            fila4 = [None]*9; fila4[2] = referencia
+            fila5 = [None]*9; fila5[2] = nombre
+            return [fila1, fila2, fila3, fila4, fila5]
 
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
+        nuevos_bloques = []
+        restante = abonos_faltantes
+        for _ in range(num_abonos - 1):
+            monto = round(random.uniform(10000, restante / 2), 2)
+            nuevos_bloques.extend(generar_bloque(fecha_random(), monto, "abono"))
+            restante -= monto
+        nuevos_bloques.extend(generar_bloque(fecha_random(), round(restante, 2), "abono"))
 
-    margen_izq = 10 * mm
-    margen_sup = height - 33 * mm
-    altura_linea = 3.8 * mm  # Espaciado ajustado
-    fuente_regular = "Arial-Narrow"
-    fuente_italic = "Arial-Narrow-Italic"
+        restante = cargos_faltantes
+        for _ in range(num_cargos - 1):
+            monto = round(random.uniform(10000, restante / 2), 2)
+            nuevos_bloques.extend(generar_bloque(fecha_random(), monto, "cargo"))
+            restante -= monto
+        nuevos_bloques.extend(generar_bloque(fecha_random(), round(restante, 2), "cargo"))
 
-    columnas = ["OPER", "LIQ", "DESCRIPCIÓN", "REFERENCIA", "CARGOS", "ABONOS", "OPERACIÓN", "LIQUIDACIÓN"]
-    posiciones = [5.658 * mm, 17.967 * mm, 29.069 * mm, 0 * mm, 137.904 * mm, 151.354 * mm, 175.228 * mm, 199.118 * mm]
+        df_nuevos = pd.DataFrame(nuevos_bloques, columns=[str(i) for i in range(9)])
+        df_comb = pd.concat([df, df_nuevos], ignore_index=True)
+        df_comb["fecha_dt"] = df_comb["1"].apply(parse_fecha_es)
+        df_comb = df_comb.sort_values(by="fecha_dt", kind="mergesort")
 
-    def encabezado(y_pos):
-        c.setFillColor(black)
-        c.setFont(fuente_regular, 9.5)
-        for i, col in enumerate(columnas):
-            c.drawString(posiciones[i], y_pos, col)
+        df_comb.drop(columns=["fecha_dt", "cargos", "abonos"], errors="ignore").to_excel(
+            "estado_trabajado_generado.xlsx", index=False, header=False)
 
-    def nueva_pagina():
-        nonlocal y
-        c.showPage()
-        y = margen_sup
-        encabezado(y)
-        y -= altura_linea
-
-    y = margen_sup
-    encabezado(y)
-    y -= altura_linea
-
-    for fecha in sorted(movimientos_por_fecha.keys()):
-        bloques = movimientos_por_fecha[fecha]
-        for idx, bloque in enumerate(bloques):
-            if y < (len(bloque) + 1) * altura_linea:
-                nueva_pagina()
-            for i, row in enumerate(bloque):
-                fuente_actual = fuente_italic if i == 1 else fuente_regular
-                c.setFont(fuente_actual, 9.5)
-
-                cargo = float(row[4]) if pd.notna(row[4]) else 0
-                abono = float(row[5]) if pd.notna(row[5]) else 0
-                saldo = max(0, saldo - cargo + abono)  # nunca negativo
-
-                for k, pos in enumerate(posiciones):
-                    texto = ""
-                    if k < len(row) and pd.notna(row[k]) and str(row[k]).lower() != "nan":
-                        texto = str(row[k])
-                    if (idx == len(bloques) - 1) and (i == len(bloque) - 1) and k in [6, 7]:
-                        texto = f"{saldo:,.2f}"
-                    c.drawString(pos, y, texto)
-                y -= altura_linea
-
-    c.save()
-    buffer.seek(0)
-    return buffer
+        with open("estado_trabajado_generado.xlsx", "rb") as f:
+            st.download_button("Descargar Excel trabajado", f, file_name="estado_trabajado_generado.xlsx")

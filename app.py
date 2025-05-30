@@ -85,26 +85,27 @@ if fase == "1. Generar Excel trabajado":
         nuevos_bloques = []
 
         if movimientos_abonos > 0:
-            abonos_valores = sorted(random.sample(range(10000, int(total_abonos)), movimientos_abonos - 1))
-            abonos_valores = [abonos_valores[0]] + [j - i for i, j in zip(abonos_valores[:-1], abonos_valores[1:])] + [int(total_abonos) - abonos_valores[-1]]
+            base = [random.uniform(1, 100) for _ in range(movimientos_abonos)]
+            factor = total_abonos / sum(base)
+            abonos_valores = [round(f * factor, 2) for f in base]
             for m in abonos_valores:
                 fecha = random.choice(fechas_posibles)
-                nuevos_bloques.append(generar_bloque(fecha, float(m), "abono"))
+                nuevos_bloques.append(generar_bloque(fecha, m, "abono"))
 
         if movimientos_cargos > 0:
             total_cargos = saldo_inicial + total_abonos - saldo_final
-            cargos_valores = sorted(random.sample(range(10000, int(total_cargos)), movimientos_cargos - 1))
-            cargos_valores = [cargos_valores[0]] + [j - i for i, j in zip(cargos_valores[:-1], cargos_valores[1:])] + [int(total_cargos) - cargos_valores[-1]]
+            base = [random.uniform(1, 100) for _ in range(movimientos_cargos)]
+            factor = total_cargos / sum(base)
+            cargos_valores = [round(f * factor, 2) for f in base]
             for m in cargos_valores:
                 fecha = random.choice(fechas_posibles)
-                nuevos_bloques.append(generar_bloque(fecha, float(m), "cargo"))
+                nuevos_bloques.append(generar_bloque(fecha, m, "cargo"))
 
         # Combinar, ordenar e integrar
         todos_bloques = bloques_originales + nuevos_bloques
         todos_bloques.sort(key=lambda x: x[0])
 
         df_final = pd.DataFrame()
-        saldos = []
         saldo_actual = saldo_inicial
 
         for i, (fecha, bloque) in enumerate(todos_bloques):

@@ -23,7 +23,14 @@ fase = st.radio("Selecciona la fase del proceso:", ["1. Generar Excel trabajado"
 
 if fase == "1. Generar Excel trabajado":
     archivo_excel = st.file_uploader("Sube el archivo Excel original", type=["xlsx"])
-    if archivo_excel:
+
+    saldo_inicial = st.number_input("Saldo inicial:", min_value=0.0, value=0.0)
+    movimientos_abonos = st.number_input("Número de abonos a agregar:", min_value=0, value=0)
+    movimientos_cargos = st.number_input("Número de cargos a agregar:", min_value=0, value=0)
+    total_abonos = st.number_input("Monto total de abonos:", min_value=0.0, value=0.0)
+    saldo_final = st.number_input("Saldo final esperado:", min_value=0.0, value=0.0)
+
+    if archivo_excel and st.button("Generar Excel trabajado"):
         df = pd.read_excel(archivo_excel, header=None)
         df.columns = [str(i) for i in range(df.shape[1])]
 
@@ -64,7 +71,7 @@ if fase == "1. Generar Excel trabajado":
 
         bloques_ordenados = sorted(bloques_info, key=lambda x: (x[0], x[1]))
 
-        saldo = 262776.23
+        saldo = saldo_inicial
         filas_finales = []
         for i, (fecha, _, bloque) in enumerate(bloques_ordenados):
             cargos = pd.to_numeric(bloque["4"], errors="coerce").fillna(0).sum()

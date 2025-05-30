@@ -62,46 +62,46 @@ if fase == "1. Generar Excel trabajado":
         bancos_mexico = ["BBVA", "CITIBANAMEX", "SANTANDER", "HSBC", "SCOTIABANK", "INBURSA", "BANORTE", "BANREGIO", "AFIRME", "BANCOPPEL"]
         bancos_validos = [b for b in bancos_mexico if b.upper() not in [x.upper() for x in bancos_baneados]]
 
-        nombres_ficticios = ["JUAN PÉREZ", "ANA LÓPEZ", "MARIO RAMÍREZ", "LILIANA GARCÍA", "ALFREDO HERNÁNDEZ"]
+        nombres_ficticios = [
+            "JUAN PÉREZ", "MARIO RAMÍREZ", "ALFREDO HERNÁNDEZ", "CARLOS TORRES", "JAVIER MARTÍNEZ",
+            "LUIS GÓMEZ", "FERNANDO MENDOZA", "RICARDO REYES", "EDUARDO MORENO", "DIEGO SALAZAR",
+            "ANA LÓPEZ", "LILIANA GARCÍA", "MARÍA FERNÁNDEZ", "PATRICIA DÍAZ", "CARMEN RIVERA",
+            "LAURA VARGAS", "ISABEL ROMERO", "VERÓNICA CASTRO", "ALEJANDRA LUNA", "CLAUDIA SOTO"
+        ]
+
         fechas_posibles = pd.date_range(rango_fecha[0], rango_fecha[1], freq="D")
 
-        def generar_bloque(fecha_dt, monto, tipo):
-            fecha_txt = fecha_dt.strftime("%d/%b").upper().replace("APR", "ABR")
-            banco = random.choice(bancos_validos)
-            concepto = "TRANSFERENCIA" if tipo == "cargo" else "BONO RECIBIDO"
-            nombre = random.choice(nombres_ficticios)
-            fila1 = f"SPEI {'ENVIADO' if tipo == 'cargo' else 'RECIBIDO'} {banco}"
-            fila2 = f"{random.randint(1000000000,9999999999)} {random.randint(100,999)} {random.randint(1000000,9999999)}{concepto}"
-            fila3 = f"{random.randint(10000000000000000000,99999999999999999999)}"
-            fila4 = f"{random.randint(10000000000000000000,99999999999999999999)}"
-            fila5 = nombre
-            bloque = pd.DataFrame([[fecha_txt, fila1, "", "", monto if tipo == "cargo" else "", monto if tipo == "abono" else "", "", ""] for _ in range(5)], columns=[str(i) for i in range(8)])
-            bloque.iloc[1, 1] = fila2
-            bloque.iloc[2, 1] = fila3
-            bloque.iloc[3, 1] = fila4
-            bloque.iloc[4, 1] = fila5
-            return (fecha_dt, bloque)
+        def generar_bloques_repartidos(total, cantidad, tipo):
+            base = [random.uniform(1, 100) for _ in range(cantidad)]
+            factor = total / sum(base)
+            montos = [round(f * factor, 2) for f in base]
+            bloques = []
+            for monto in montos:
+                fecha = random.choice(fechas_posibles)
+                fecha_txt = fecha.strftime("%d/%b").upper().replace("APR", "ABR")
+                banco = random.choice(bancos_validos)
+                concepto = "TRANSFERENCIA" if tipo == "cargo" else "BONO RECIBIDO"
+                nombre = random.choice(nombres_ficticios)
+                fila1 = f"SPEI {'ENVIADO' if tipo == 'cargo' else 'RECIBIDO'} {banco}"
+                fila2 = f"{random.randint(1000000000,9999999999)} {random.randint(100,999)} {random.randint(1000000,9999999)}{concepto}"
+                fila3 = f"{random.randint(10000000000000000000,99999999999999999999)}"
+                fila4 = f"{random.randint(10000000000000000000,99999999999999999999)}"
+                fila5 = nombre
+                bloque = pd.DataFrame([[fecha_txt, fila1, "", "", monto if tipo == "cargo" else "", monto if tipo == "abono" else "", "", ""] for _ in range(5)], columns=[str(i) for i in range(8)])
+                bloque.iloc[1, 1] = fila2
+                bloque.iloc[2, 1] = fila3
+                bloque.iloc[3, 1] = fila4
+                bloque.iloc[4, 1] = fila5
+                bloques.append((fecha, bloque))
+            return bloques
 
         nuevos_bloques = []
-
         if movimientos_abonos > 0:
-            base = [random.uniform(1, 100) for _ in range(movimientos_abonos)]
-            factor = total_abonos / sum(base)
-            abonos_valores = [round(f * factor, 2) for f in base]
-            for m in abonos_valores:
-                fecha = random.choice(fechas_posibles)
-                nuevos_bloques.append(generar_bloque(fecha, m, "abono"))
-
+            nuevos_bloques += generar_bloques_repartidos(total_abonos, movimientos_abonos, "abono")
         if movimientos_cargos > 0:
             total_cargos = saldo_inicial + total_abonos - saldo_final
-            base = [random.uniform(1, 100) for _ in range(movimientos_cargos)]
-            factor = total_cargos / sum(base)
-            cargos_valores = [round(f * factor, 2) for f in base]
-            for m in cargos_valores:
-                fecha = random.choice(fechas_posibles)
-                nuevos_bloques.append(generar_bloque(fecha, m, "cargo"))
+            nuevos_bloques += generar_bloques_repartidos(total_cargos, movimientos_cargos, "cargo")
 
-        # Combinar, ordenar e integrar
         todos_bloques = bloques_originales + nuevos_bloques
         todos_bloques.sort(key=lambda x: x[0])
 

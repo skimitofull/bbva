@@ -103,10 +103,11 @@ if fase == "1. Generar Excel trabajado":
             nuevos_bloques += generar_bloques_repartidos(total_cargos, movimientos_cargos, "cargo")
 
         todos_bloques = bloques_originales + nuevos_bloques
-        todos_bloques.sort(key=lambda x: x[0])
+        todos_bloques.sort(key=lambda x: (x[0], x[1].iloc[0][1]))
 
         df_final = pd.DataFrame()
         saldo_actual = saldo_inicial
+        fecha_anterior = None
 
         for i, (fecha, bloque) in enumerate(todos_bloques):
             bloque_cargos = pd.to_numeric(bloque["4"], errors="coerce").fillna(0).sum()

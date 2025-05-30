@@ -4,6 +4,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime
 import random
+from decimal import Decimal, ROUND_HALF_UP
 
 # Registrar fuente Arial-Narrow
 try:
@@ -57,8 +58,6 @@ if fase == "1. Generar Excel trabajado":
                 i += 5
             return bloques
 
-        bloques_originales = extraer_bloques(original)
-
         bancos_mexico = ["BBVA", "CITIBANAMEX", "SANTANDER", "HSBC", "SCOTIABANK", "INBURSA", "BANORTE", "BANREGIO", "AFIRME", "BANCOPPEL"]
         bancos_validos = [b for b in bancos_mexico if b.upper() not in [x.upper() for x in bancos_baneados]]
 
@@ -71,10 +70,16 @@ if fase == "1. Generar Excel trabajado":
 
         fechas_posibles = pd.date_range(rango_fecha[0], rango_fecha[1], freq="D")
 
-        def generar_bloques_repartidos(total, cantidad, tipo):
-            base = [random.uniform(1, 100) for _ in range(cantidad)]
-            factor = total / sum(base)
-            montos = [round(f * factor, 2) for f in base]
+        def generar_montos_exactos(total, cantidad):
+            base = [Decimal(random.uniform(1, 100)) for _ in range(cantidad)]
+            factor = Decimal(total) / sum(base)
+            montos = [float((x * factor).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)) for x in base]
+            diferencia = round(total - sum(montos), 2)
+            if diferencia != 0:
+                montos[-1] += diferencia
+            return montos
+
+        def generar_bloques(montos, tipo):
             bloques = []
             for monto in montos:
                 fecha = random.choice(fechas_posibles)
@@ -95,31 +100,32 @@ if fase == "1. Generar Excel trabajado":
                 bloques.append((fecha, bloque))
             return bloques
 
+        bloques_originales = extraer_bloques(original)
         nuevos_bloques = []
         if movimientos_abonos > 0:
-            nuevos_bloques += generar_bloques_repartidos(total_abonos, movimientos_abonos, "abono")
+            montos_abono = generar_montos_exactos(total_abonos, movimientos_abonos)
+            nuevos_bloques += generar_bloques(montos_abono, "abono")
         if movimientos_cargos > 0:
-            total_cargos = saldo_inicial + total_abonos - saldo_final
-            nuevos_bloques += generar_bloques_repartidos(total_cargos, movimientos_cargos, "cargo")
+            total_cargos = round(saldo_inicial + total_abonos - saldo_final, 2)
+            montos_cargo = generar_montos_exactos(total_cargos, movimientos_cargos)
+            nuevos_bloques += generar_bloques(montos_cargo, "cargo")
 
         todos_bloques = bloques_originales + nuevos_bloques
         todos_bloques.sort(key=lambda x: (x[0], x[1].iloc[0][1]))
 
         df_final = pd.DataFrame()
         saldo_actual = saldo_inicial
-        fecha_anterior = None
+        fecha_actual = None
 
         for i, (fecha, bloque) in enumerate(todos_bloques):
             bloque_cargos = pd.to_numeric(bloque["4"], errors="coerce").fillna(0).sum()
             bloque_abonos = pd.to_numeric(bloque["5"], errors="coerce").fillna(0).sum()
             saldo_actual = max(0, saldo_actual - bloque_cargos + bloque_abonos)
-
             siguiente_fecha = todos_bloques[i+1][0] if i + 1 < len(todos_bloques) else None
             mostrar_saldo = fecha != siguiente_fecha
             bloque["6"] = bloque["7"] = ""
             if mostrar_saldo:
                 bloque.iloc[-1, 6] = bloque.iloc[-1, 7] = f"{saldo_actual:,.2f}"
-
             df_final = pd.concat([df_final, bloque], ignore_index=True)
 
         archivo_final = "estado_bancario_excel_corregido_final.xlsx"

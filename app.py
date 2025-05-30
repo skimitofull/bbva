@@ -46,20 +46,43 @@ if fase == "1. Generar Excel trabajado":
         df["fecha_dt"] = df["1"].apply(parse_fecha_es)
         df["cargos"] = pd.to_numeric(df["4"], errors="coerce").fillna(0)
         df["abonos"] = pd.to_numeric(df["5"], errors="coerce").fillna(0)
-        df["es_ultima"] = (df["fecha_dt"] != df["fecha_dt"].shift(-1)) & df["fecha_dt"].notna()
+
+        # Reconstrucción por bloques de 5 filas
+        bloques = []
+        i = 0
+        while i < len(df):
+            bloque = df.iloc[i:i+5]
+            if len(bloque) == 5:
+                bloques.append(bloque)
+            i += 5
+
+        bloques_info = []
+        for idx, b in enumerate(bloques):
+            fecha = b.iloc[0]["1"]
+            fecha_dt = parse_fecha_es(fecha)
+            bloques_info.append((fecha_dt, idx, b))
+
+        bloques_ordenados = sorted(bloques_info, key=lambda x: (x[0], x[1]))
 
         saldo = 262776.23
-        saldos = []
-        for i, row in df.iterrows():
-            saldo = saldo - row["cargos"] + row["abonos"]
-            saldo = max(0, saldo)
-            saldos.append(saldo if row["es_ultima"] else "")
+        filas_finales = []
+        for i, (fecha, _, bloque) in enumerate(bloques_ordenados):
+            cargos = pd.to_numeric(bloque["4"], errors="coerce").fillna(0).sum()
+            abonos = pd.to_numeric(bloque["5"], errors="coerce").fillna(0).sum()
+            saldo = max(0, saldo - cargos + abonos)
 
-        df["6"] = [f"{s:,.2f}" if isinstance(s, float) else "" for s in saldos]
-        df["7"] = df["6"]
+            siguiente_fecha = bloques_ordenados[i + 1][0] if i + 1 < len(bloques_ordenados) else None
+            mostrar_saldo = fecha != siguiente_fecha
 
+            for j in range(len(bloque)):
+                fila = bloque.iloc[j].copy()
+                fila["6"] = f"{saldo:,.2f}" if mostrar_saldo and j == len(bloque) - 1 else ""
+                fila["7"] = fila["6"]
+                filas_finales.append(fila)
+
+        df_resultado = pd.DataFrame(filas_finales)
         archivo_final = "estado_bancario_excel_corregido_final.xlsx"
-        df.drop(columns=["fecha_dt", "cargos", "abonos", "es_ultima"]).to_excel(archivo_final, index=False, header=False)
+        df_resultado.to_excel(archivo_final, index=False, header=False)
 
         with open(archivo_final, "rb") as f:
             st.download_button("Descargar Excel corregido", f, file_name=archivo_final)
